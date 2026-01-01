@@ -476,13 +476,22 @@ def run_scheduled_check():
         print("Geen nieuwe value bets sinds laatste check")
 
 
-def run_scheduler(interval_minutes=30):
+
+def is_quiet_hours():
+    """Check of het tussen 23:00 en 07:00 is (Nederlandse tijd)"""
+    utc_now = datetime.utcnow()
+    nl_hour = (utc_now.hour + 1) % 24
+    return nl_hour >= 23 or nl_hour < 7
+
+
+def run_scheduler(interval_minutes=90):
     """Start de scheduler die elk interval_minutes minuten draait"""
     print(f"""
 ================================================================
    VOETBAL VALUE BET SCHEDULER GESTART
 ================================================================
    Interval: elke {interval_minutes} minuten
+   Rusttijd: 23:00 - 07:00 (geen checks)
    Email naar: {EMAIL_TO}
    Email geconfigureerd: {'JA' if EMAIL_PASSWORD != 'JOUW_APP_PASSWORD' else 'NEE - configureer eerst!'}
 
@@ -493,14 +502,20 @@ def run_scheduler(interval_minutes=30):
     if EMAIL_PASSWORD != "JOUW_APP_PASSWORD":
         send_email(
             "Value Bet Scanner Gestart",
-            "<h2>Value Bet Scanner is gestart!</h2><p>Je ontvangt emails wanneer er nieuwe value bets worden gevonden.</p>"
+            "<h2>Value Bet Scanner is gestart!</h2><p>Je ontvangt emails wanneer er nieuwe value bets worden gevonden.</p><p>Draait elke 90 minuten, pauzeert tussen 23:00-07:00.</p>"
         )
 
     while True:
         try:
-            run_scheduled_check()
-            print(f"\nVolgende check over {interval_minutes} minuten...")
-            time.sleep(interval_minutes * 60)
+            if is_quiet_hours():
+                utc_now = datetime.utcnow()
+                nl_hour = (utc_now.hour + 1) % 24
+                print(f"\n[{datetime.now().strftime('%H:%M')}] Rusttijd (23:00-07:00 NL tijd, nu {nl_hour}:00) - slaap 30 min...")
+                time.sleep(30 * 60)
+            else:
+                run_scheduled_check()
+                print(f"\nVolgende check over {interval_minutes} minuten...")
+                time.sleep(interval_minutes * 60)
 
         except KeyboardInterrupt:
             print("\n\nScheduler gestopt door gebruiker")
@@ -521,4 +536,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--once":
         run_scheduled_check()
     else:
-        run_scheduler(interval_minutes=30)
+        run_scheduler(interval_minutes=90)
