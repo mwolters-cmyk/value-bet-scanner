@@ -1,5 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "python voetbal_scheduler.py"
